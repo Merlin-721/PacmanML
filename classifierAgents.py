@@ -37,6 +37,76 @@ import os
 import csv
 import numpy as np
 from sklearn import tree
+import math
+
+
+class Node():
+    def __init__(self):
+        pass
+
+    def traverse(self):
+        raise Exception("You cant instantiate a node. Node is abstract")
+
+class Decision(Node):
+    def __init__(self,data,clss): 
+        pass
+
+    def traverse(self):        
+        pass
+
+class Leaf(Node):
+    def __init__(self,value):
+        super.__init__()
+        self.value = value
+
+    def traverse(self):
+        pass 
+
+class DecisionTree():
+    def __init__(self):
+        self.nodes = []
+
+    def train(self):
+        pass
+    
+    def predict(self):
+        pass
+
+    # instanceClasses are numbers of each class contained
+    # simply works out purity of class
+    def purity(self,instanceClasses):
+        M = float(sum(instanceClasses))
+        purity = 0.0
+        for n in instanceClasses:
+            Bq = -((float(n)/M)*math.log(float(n)/M,2))
+            purity += Bq
+
+        return purity
+
+    # featureColumn is a column of features
+    # classColumn is column of class labels
+    def informationGain(self,featureColumn,classColumn):
+
+        
+        features = list(np.unique(featureColumn)) # make list of unique features
+        
+        featCounter = np.zeros(len(features)) # counter for each features
+        yesCounter = featCounter.copy() # counter for feature and yes
+
+        for f,c in zip(featureColumn,classColumn):
+            featCounter[features.index(f)] += 1
+            if c != 0 or c != False:
+                yesCounter[features.index(f)] += 1 
+
+        M = len(featureColumn)
+        remainder = 0
+        for feat,yes in zip(featCounter,yesCounter):
+            remainder += feat/M * self.purity([yes,feat-yes])
+
+        return remainder    
+
+
+
 
 # ClassifierAgent
 #
@@ -46,7 +116,7 @@ class ClassifierAgent(Agent):
     # Constructor. This gets run when the agent starts up.
     def __init__(self):
         print "Initialising"
-
+        self.model = DecisionTree()
     # Take a string of digits and convert to an array of
     # numbers. Exploits the fact that we know the digits are in the
     # range 0-4.
@@ -136,7 +206,7 @@ class ClassifierAgent(Agent):
     def getAction(self, state):
 
         # How we access the features.
-        features = api.getFeatureVector(state)
+        features = api.getFeatureVector(state) # first 4: walls, next 4: food, next 8: ghosts, next 1: ghost infront, next 1: class
         
         # *****************************************************
         #
@@ -146,6 +216,8 @@ class ClassifierAgent(Agent):
         #
         # *******************************************************
 
+        # from collected 'features' vector, classify as any of 0-3.
+        # this gives your move
         
 
         # Get the actions we can try.

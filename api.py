@@ -496,28 +496,30 @@ def getFeatureVector(state):
     yLoc = state.getPacmanPosition()[1]
 
     #Are there walls around Pacman?
+    #1 for yes, 0 for no
     wallGrid = state.getWalls()
     if wallGrid[xLoc][yLoc+1] == True:
-        features.append(1)
+        features.append(1) # wall above so 1
     else:
         features.append(0)
     if wallGrid[xLoc+1][yLoc] == True:
-        features.append(1)
+        features.append(1)# wall to right so 1 
     else:
         features.append(0)
     if wallGrid[xLoc][yLoc-1] == True:
-        features.append(1)
+        features.append(1)# wall below so 1
     else:
         features.append(0)
     if wallGrid[xLoc-1][yLoc] == True:
-        features.append(1)
+        features.append(1)# wall to left so 1
     else:
         features.append(0)
 
     # Is there food around Pacman?
+    # 1 for yes 0 for no
     foodGrid = state.getFood()
     if foodGrid[xLoc][yLoc+1] == True:
-        features.append(1)
+        features.append(1)# food to right
     else:
         features.append(0)
     if foodGrid[xLoc+1][yLoc] == True:
@@ -540,11 +542,11 @@ def getFeatureVector(state):
 
     for i in range(len(ghosts)):
         if ghosts[i] == (xLoc-1, yLoc+1):
-            features.append(1)
+            features.append(1)# ghost top left
         else:
             features.append(0)
         if ghosts[i] == (xLoc, yLoc+1):
-            features.append(1)
+            features.append(1)# ghost above
         else:
             features.append(0)
         if ghosts[i] == (xLoc+1, yLoc+1):
@@ -575,7 +577,7 @@ def getFeatureVector(state):
     # Is there a ghost in front of Pacman?
     for i in range(len(ghosts)):
         if inFront(ghosts[i], facing, state):
-            visibleGhost = True
+            visibleGhost = True # ghost down corridor
 
     if visibleGhost:
         features.append(1)
