@@ -49,6 +49,7 @@ class Node():
 
 class Decision(Node):
     def __init__(self,data,clss): 
+        self.children = []
         pass
 
     def traverse(self):        
@@ -62,14 +63,31 @@ class Leaf(Node):
     def traverse(self):
         pass 
 
-class DecisionTree():
-    def __init__(self):
-        self.nodes = []
 
-    def train(self):
-        pass
+
+
+
+
+
+class DecisionTree():  # base decision tree ( in classes )
+    def __init__(self,minLeafInstances = 1):
+        self.nodes = []
+        self.minLeafInstances = minLeafInstances #min leaf samples
+        self.classes = []
+
+    def train(self,X,Y): # equivalent to fit
+        nSamples, self.nFeatures = X.shape
+        # Y = np.at_least1d(Y)
+        if len(Y) != nSamples:
+            raise ValueError("Number of labels {} does not match samples {}".format(len(Y),nSamples))
+        #calls bestFirstTreeBuilder
+
+
     
     def predict(self):
+        pass
+
+    def prune(self):
         pass
 
     # instanceClasses are numbers of each class contained
@@ -78,20 +96,26 @@ class DecisionTree():
         M = float(sum(instanceClasses))
         purity = 0.0
         for n in instanceClasses:
-            Bq = -((float(n)/M)*math.log(float(n)/M,2))
+            if n != 0:
+                fraction = float(n)/M
+                Bq = -(fraction*math.log(fraction,2))
+            else:
+                Bq = 0
+                print("n was 0")
             purity += Bq
 
         return purity
 
     # featureColumn is a column of features
     # classColumn is column of class labels
-    def informationGain(self,featureColumn,classColumn):
+    def weightedEntropies(self,featureColumn,classColumn):
 
         
         features = list(np.unique(featureColumn)) # make list of unique features
         
         featCounter = np.zeros(len(features)) # counter for each features
         yesCounter = featCounter.copy() # counter for feature and yes
+
 
         for f,c in zip(featureColumn,classColumn):
             featCounter[features.index(f)] += 1
@@ -106,6 +130,41 @@ class DecisionTree():
         return remainder    
 
 
+    def split(self,X,Y):
+
+        # if X.shape[1] == 1:
+        #     mode = max(set(Y), key=Y.count)
+        #     self.nodes.append([Leaf(mode)])
+        #     #clear memory of data for this node
+
+        data = {}
+        data["X"] = {}
+        data["Y"] = {}
+        
+        reshapeX = X.T
+        
+        attrEntropies = []
+        for attr in reshapeX: # attr is a column
+            attrEntropies.append(self.weightedEntropies(attr,Y)) # calc entropies
+
+        # max information gain is min entropy
+        maxIndex = np.argmin(attrEntropies)
+        newSets = np.unique(reshapeX[maxIndex])
+        #initialise empty sets
+        data["X"] = {Set:[] for Set in newSets}
+        data["Y"] = {Set:[] for Set in newSets}
+
+        for i in range(len(Y)):
+            row = X[i]
+            r = list(row[:])
+            del r[maxIndex]
+            data["X"][row[maxIndex]].append(np.array(r))
+            data["Y"][row[maxIndex]].append(Y[i])
+
+        decisionNode = Decision(data,maxIndex)
+        self.nodes.append([Decision(data,maxIndex)]) # create node, containing feature number to split with
+
+        return data
 
 
 # ClassifierAgent
@@ -179,6 +238,8 @@ class ClassifierAgent(Agent):
         # You may wish to create your classifier here.
         #
         # *********************************************
+
+        
         
     # Tidy up when Pacman dies
     def final(self, state):
