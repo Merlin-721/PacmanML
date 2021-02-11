@@ -66,7 +66,8 @@ class test_DecisionTree(unittest.TestCase):
 
         # class labels
         self.tree = DecisionTree()
-        self.assertEquals(self.tree.split(x, y), test)
+        result = self.tree.split(X, Y)
+        self.assertItemsEqual(result, test)
 
 
 def suite():

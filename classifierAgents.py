@@ -161,8 +161,6 @@ class DecisionTree():  # base decision tree ( in classes )
             data["X"][row[maxIndex]].append(np.array(r))
             data["Y"][row[maxIndex]].append(Y[i])
 
-        decisionNode = Decision(data,maxIndex)
-        self.nodes.append([Decision(data,maxIndex)]) # create node, containing feature number to split with
 
         return data
 
