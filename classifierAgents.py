@@ -40,20 +40,33 @@ from sklearn import tree
 import math
 import Queue
 
-class Node():
+class Node(object):
     def __init__(self,value):
         self.value = value
 
     def traverse(self):
         raise Exception("You cant instantiate a node. Node is abstract")
 
-class Decision(Node):
-    children = []
+class Root(Node):
+    def __init__(self,value):
+        self.value = value
+        self.children = []
+
+    def traverse(self):
+        pass
+
+class Decision(Root):
+    def __init__(self, value, attrIndex):
+        super(Decision,self).__init__(value)
+        self.attrIndex = attrIndex
 
     def traverse(self):        
         pass
 
 class Leaf(Node):
+    def __init__(self,value):
+        self.value = value
+
     def traverse(self):
         return self.value 
 
@@ -74,26 +87,8 @@ class DecisionTree():  # base decision tree ( in classes )
         # Y = np.at_least1d(Y)
         if len(Y) != nSamples:
             raise ValueError("Number of labels {} does not match samples {}".format(len(Y),nSamples))
-        #calls bestFirstTreeBuilder
 
-
-        splitQueue = Queue.Queue()
-        splitQueue.put([X, Y, Decision("Root")]) # adds array of Xdata, Ydata and Decision Class to queue
-        
-        while not splitQueue.empty():
-            
-            splitTarget = splitQueue.get()
-            parentNode = splitTarget[2] # parentNode points to Decision object
-            sets = self.split(splitTarget[0], splitTarget[1]) # split returns split datasets
-
-            parentNode.children.append(sets) # append to children in parent node object
-
-            for x,y in zip(sets["X"],sets["Y"]):
-                splitQueue.put([sets["X"][x],sets["Y"][y],Decision(len(self.nodes)+1)]) # add new dataset to queue
-
-            self.nodes.append(parentNode)
-
-
+        self.split(X, Y, Root("Root")) 
     
     def predict(self):
         pass
@@ -141,18 +136,14 @@ class DecisionTree():  # base decision tree ( in classes )
         return remainder    
 
 
-    def split(self,X,Y):
+    def split(self,X,Y, parentNode):
+        # X input as array of rows
 
-        # if X.shape[1] == 1:
-        #     mode = max(set(Y), key=Y.count)
-        #     self.nodes.append([Leaf(mode)])
-        #     #clear memory of data for this node
-
-        data = {}
-        data["X"] = {}
-        data["Y"] = {}
+        # data = {}
+        # data["X"] = {}
+        # data["Y"] = {}
         
-        reshapeX = np.array(X).T
+        reshapeX = np.array(X).T # make data cols
         
         attrEntropies = []
         for attr in reshapeX: # attr is a column
@@ -160,20 +151,36 @@ class DecisionTree():  # base decision tree ( in classes )
 
         # max information gain is min entropy
         maxIndex = np.argmin(attrEntropies)
-        newSets = np.unique(reshapeX[maxIndex])
-        #initialise empty sets
-        data["X"] = {Set:[] for Set in newSets}
-        data["Y"] = {Set:[] for Set in newSets}
+        newSets = np.unique(reshapeX[maxIndex]) # attributes we will split by
 
-        for i in range(len(Y)):
-            row = X[i]
-            r = list(row[:])
-            del r[maxIndex]
-            data["X"][row[maxIndex]].append(np.array(r))
-            data["Y"][row[maxIndex]].append(Y[i])
 
-        return data
 
+        # #initialise empty sets
+        # data["X"] = {Set:[] for Set in newSets}
+        # data["Y"] = {Set:[] for Set in newSets}
+
+        # for i in range(len(Y)):
+        #     row = X[i]
+        #     r = list(row[:])
+        #     del r[maxIndex]
+        #     data["X"][row[maxIndex]].append(np.array(r))
+        #     data["Y"][row[maxIndex]].append(Y[i])
+
+        for att in newSets:
+            rows = np.where(reshapeX[maxIndex]==att) # indexes where split attribute = att
+            yNew = Y[rows]
+
+            if len(np.unique(yNew))==1 or all(el == attrEntropies[0] for el in attrEntropies): # if y only has one attrbute
+                leafNode = Leaf(yNew[0])
+                parentNode.children.append(leafNode)
+                self.nodes.append(leafNode)
+
+            else:
+                xNew = X[rows] # xNew is all values with split attribute
+                node = Decision(att, maxIndex)
+                parentNode.children.append(node)
+                self.nodes.append(node)
+                self.split(xNew,yNew,node)
 
 
 
