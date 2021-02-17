@@ -70,9 +70,23 @@ class test_DecisionTree(unittest.TestCase):
         self.assertItemsEqual(result, test)
 
 
+    def trainTest(self):
+
+        new = np.array([False, False, True, True, False, False, False, True, True, True])
+        type = np.array(["Action", "Comedy", "Drama", "Comedy", "Action", "Drama", "Comedy", "Action", "Drama", "Action"])
+        lang = np.array(["Eng", "Sp", "Eng", "Sp", "Sp", "Sp", "Fr", "Sp", "Eng", "Fr"])
+        X = np.array([new, type, lang]).transpose()
+
+        # class labels
+        Y = np.array([True, True, False, True, True, True, False, False, True, False])
+
+        self.tree = DecisionTree()
+        self.tree.train(X, Y)
+        # self.assertItemsEqual(result, test)
+
 def suite():
     suite = unittest.TestSuite()
-    suite.addTest(test_DecisionTree("test_split"))
+    suite.addTest(test_DecisionTree("trainTest"))
     return suite
 if __name__ == '__main__':
     result = suite()

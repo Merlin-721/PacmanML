@@ -38,30 +38,24 @@ import csv
 import numpy as np
 from sklearn import tree
 import math
-
+import Queue
 
 class Node():
-    def __init__(self):
-        pass
+    def __init__(self,value):
+        self.value = value
 
     def traverse(self):
         raise Exception("You cant instantiate a node. Node is abstract")
 
 class Decision(Node):
-    def __init__(self,data,clss): 
-        self.children = []
-        pass
+    children = []
 
     def traverse(self):        
         pass
 
 class Leaf(Node):
-    def __init__(self,value):
-        super.__init__()
-        self.value = value
-
     def traverse(self):
-        pass 
+        return self.value 
 
 
 
@@ -81,6 +75,23 @@ class DecisionTree():  # base decision tree ( in classes )
         if len(Y) != nSamples:
             raise ValueError("Number of labels {} does not match samples {}".format(len(Y),nSamples))
         #calls bestFirstTreeBuilder
+
+
+        splitQueue = Queue.Queue()
+        splitQueue.put([X, Y, Decision("Root")]) # adds array of Xdata, Ydata and Decision Class to queue
+        
+        while not splitQueue.empty():
+            
+            splitTarget = splitQueue.get()
+            parentNode = splitTarget[2] # parentNode points to Decision object
+            sets = self.split(splitTarget[0], splitTarget[1]) # split returns split datasets
+
+            parentNode.children.append(sets) # append to children in parent node object
+
+            for x,y in zip(sets["X"],sets["Y"]):
+                splitQueue.put([sets["X"][x],sets["Y"][y],Decision(len(self.nodes)+1)]) # add new dataset to queue
+
+            self.nodes.append(parentNode)
 
 
     
@@ -141,7 +152,7 @@ class DecisionTree():  # base decision tree ( in classes )
         data["X"] = {}
         data["Y"] = {}
         
-        reshapeX = X.T
+        reshapeX = np.array(X).T
         
         attrEntropies = []
         for attr in reshapeX: # attr is a column
@@ -161,8 +172,11 @@ class DecisionTree():  # base decision tree ( in classes )
             data["X"][row[maxIndex]].append(np.array(r))
             data["Y"][row[maxIndex]].append(Y[i])
 
-
         return data
+
+
+
+
 
 
 # ClassifierAgent
