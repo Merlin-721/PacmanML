@@ -44,31 +44,23 @@ class Node(object):
     def __init__(self,value):
         self.value = value
 
-    def traverse(self):
-        raise Exception("You cant instantiate a node. Node is abstract")
-
 class Root(Node):
     def __init__(self,value):
         self.value = value
         self.children = []
 
-    def traverse(self):
-        pass
 
 class Decision(Root):
     def __init__(self, value, attrIndex):
         super(Decision,self).__init__(value)
         self.attrIndex = attrIndex
 
-    def traverse(self):        
-        pass
 
 class Leaf(Node):
-    def __init__(self,value):
+    def __init__(self,value,attrIndex):
+        self.attrIndex = attrIndex
         self.value = value
 
-    def traverse(self):
-        return self.value 
 
 
 
@@ -87,11 +79,24 @@ class DecisionTree():  # base decision tree ( in classes )
         # Y = np.at_least1d(Y)
         if len(Y) != nSamples:
             raise ValueError("Number of labels {} does not match samples {}".format(len(Y),nSamples))
-
-        self.split(X, Y, Root("Root")) 
+        self.nodes.append(Root("Root"))
+        self.split(X, Y, self.nodes[0])
     
-    def predict(self):
-        pass
+    def predict(self,X, node = None):
+        
+        if node == None:
+            # set node to root if unspecified
+            node = self.nodes[0]
+
+        # if node is leaf, return leaf value
+        if isinstance(node,Leaf):
+            return node.value
+
+        children = node.children
+        for child in children:
+            index = child.attrIndex
+            if str(X[index]) == str(child.value):
+                return self.predict(X,child)
 
     def prune(self):
         pass
@@ -139,48 +144,42 @@ class DecisionTree():  # base decision tree ( in classes )
     def split(self,X,Y, parentNode):
         # X input as array of rows
 
-        # data = {}
-        # data["X"] = {}
-        # data["Y"] = {}
-        
-        reshapeX = np.array(X).T # make data cols
+        # make data cols
+        reshapeX = np.array(X).T 
         
         attrEntropies = []
-        for attr in reshapeX: # attr is a column
-            attrEntropies.append(self.weightedEntropies(attr,Y)) # calc entropies
+        # attr is a column
+        for attr in reshapeX: 
+            # calc entropies
+            attrEntropies.append(self.weightedEntropies(attr,Y)) 
 
         # max information gain is min entropy
         maxIndex = np.argmin(attrEntropies)
-        newSets = np.unique(reshapeX[maxIndex]) # attributes we will split by
+        # unique attributes we will split by
+        newSets = np.unique(reshapeX[maxIndex]) 
 
 
-
-        # #initialise empty sets
-        # data["X"] = {Set:[] for Set in newSets}
-        # data["Y"] = {Set:[] for Set in newSets}
-
-        # for i in range(len(Y)):
-        #     row = X[i]
-        #     r = list(row[:])
-        #     del r[maxIndex]
-        #     data["X"][row[maxIndex]].append(np.array(r))
-        #     data["Y"][row[maxIndex]].append(Y[i])
 
         for att in newSets:
-            rows = np.where(reshapeX[maxIndex]==att) # indexes where split attribute = att
+            # indexes where split attribute = att
+            rows = np.where(reshapeX[maxIndex]==att) 
             yNew = Y[rows]
 
             if len(np.unique(yNew))==1 or all(el == attrEntropies[0] for el in attrEntropies): # if y only has one attrbute
-                leafNode = Leaf(yNew[0])
+                # leaf node with value of label
+                leafNode = Leaf(yNew[0],maxIndex) 
                 parentNode.children.append(leafNode)
                 self.nodes.append(leafNode)
+                print()
 
             else:
-                xNew = X[rows] # xNew is all values with split attribute
-                node = Decision(att, maxIndex)
-                parentNode.children.append(node)
-                self.nodes.append(node)
-                self.split(xNew,yNew,node)
+                # xNew is all values with split attribute
+                xNew = X[rows] 
+                # decision node for attribute
+                desNode = Decision(att, maxIndex) 
+                parentNode.children.append(desNode)
+                self.nodes.append(desNode)
+                self.split(xNew,yNew,desNode)
 
 
 

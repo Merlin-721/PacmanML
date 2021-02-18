@@ -84,9 +84,30 @@ class test_DecisionTree(unittest.TestCase):
         self.tree.train(X, Y)
         # self.assertItemsEqual(result, test)
 
+    def traverseTest(self):
+
+        # TRAINING WITH ONE EXAMPLE REMOVED
+        new = np.array([False, True, True, False, False, False, True, True, True])
+        type = np.array(["Comedy", "Drama", "Comedy", "Action", "Drama", "Comedy", "Action", "Drama", "Action"])
+        lang = np.array(["Sp", "Eng", "Sp", "Sp", "Sp", "Fr", "Sp", "Eng", "Fr"])
+        Xtrain = np.array([new, type, lang]).transpose()
+        Ytrain = np.array([True, False, True, True, True, False, False, True, False])
+
+        # WANT TO PREDICT THIS
+        Xtest = np.array([False,"Action","Eng"])
+        # Ytest = np.array([True])
+        Ytest = True
+        self.tree = DecisionTree()
+        self.tree.train(Xtrain, Ytrain)
+
+        # should return leaf value
+        result = self.tree.predict(Xtest)
+
+        self.assertEqual(result, Ytest)
+
 def suite():
     suite = unittest.TestSuite()
-    suite.addTest(test_DecisionTree("trainTest"))
+    suite.addTest(test_DecisionTree("traverseTest"))
     return suite
 if __name__ == '__main__':
     result = suite()
