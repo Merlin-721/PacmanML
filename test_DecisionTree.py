@@ -1,5 +1,6 @@
 import unittest
 from classifierAgents import DecisionTree
+from classifierAgents import Decision
 import numpy as np
 
 class test_DecisionTree(unittest.TestCase):
@@ -17,10 +18,10 @@ class test_DecisionTree(unittest.TestCase):
         X = ["Action","Comedy","Drama","Comedy","Action","Drama","Comedy","Action","Drama","Action"]
         answer = 0.951
 
-        test = self.tree.weightedEntropies(X,Y)
+        test = self.tree.weightedEntropy(X,Y)
         self.assertEqual(answer,np.round(test,3))
 
-    def test_split(self):
+    def test_build(self):
 
         testX = {}
         testY = {}
@@ -66,7 +67,7 @@ class test_DecisionTree(unittest.TestCase):
 
         # class labels
         self.tree = DecisionTree()
-        result = self.tree.split(X, Y)
+        result = self.tree.build(X, Y)
         self.assertItemsEqual(result, test)
 
 
@@ -82,6 +83,16 @@ class test_DecisionTree(unittest.TestCase):
 
         self.tree = DecisionTree()
         self.tree.train(X, Y)
+
+        # decision = classifierAgents
+
+        count = 0
+        for nd in self.tree.nodes:
+            if isinstance(nd,Decision):
+                print("Decision node " + str(count) + " has " + str(len(nd.children))+" children")
+            count +=1
+
+        print
         # self.assertItemsEqual(result, test)
 
     def traverseTest(self):
@@ -107,7 +118,7 @@ class test_DecisionTree(unittest.TestCase):
 
 def suite():
     suite = unittest.TestSuite()
-    suite.addTest(test_DecisionTree("traverseTest"))
+    suite.addTest(test_DecisionTree("trainTest"))
     return suite
 if __name__ == '__main__':
     result = suite()
