@@ -57,6 +57,7 @@ class Root(Node):
         for child in self.children:
             if X[self.attrIndex] == child.value:
                 return child.predict(X)
+        raise ValueError("Attribute value of X did not match any children values")
 
 class Decision(Root):
     def __init__(self, value):
@@ -72,10 +73,10 @@ class Leaf(Node):
 
 
 class DecisionTree():  
-    
+    """Decision tree class containing classifier
+    """    
     def __init__(self,minLeafInstances = 1):
         self.nodes = []
-        self.minLeafInstances = minLeafInstances #min leaf samples
         self.classes = []
 
     def train(self,X,Y): 
@@ -127,8 +128,6 @@ class DecisionTree():
         """        
         return self.nodes[0].predict(X)
 
-    # instanceClasses are numbers of each class contained
-    # simply works out purity of class
     def purity(self,instanceClasses):
         """Calculates purity of class
 
@@ -138,13 +137,16 @@ class DecisionTree():
         Returns:
             purity (float): Purity of the class
         """        
+        assert isinstance(instanceClasses,list), "Class labels input as incorrect type"
+
         M = float(sum(instanceClasses))
         purity = 0.0
         for n in instanceClasses:
-            if n != 0:
+            try:
                 fraction = float(n)/M
                 Bq = -(fraction*math.log(fraction,2))
-            else:
+            except:
+                print("Divide by zero: no instances of class contained. 0 weight used")
                 Bq = 0
             purity += Bq
 
@@ -161,7 +163,9 @@ class DecisionTree():
         Returns:
             remainder (float): Weighted entropy of data
         """
-        
+        assert isinstance(featureColumn,np.ndarray), "Features input as incorrect type"
+        assert isinstance(classColumn,np.ndarray), "Class labels input as incorrect type"
+
         features = list(np.unique(featureColumn)) # make list of unique features
         
         featCounter = np.zeros(len(features)) # counter for each features

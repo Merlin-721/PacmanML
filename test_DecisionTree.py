@@ -67,7 +67,8 @@ class test_DecisionTree(unittest.TestCase):
 
         # class labels
         self.tree = DecisionTree()
-        result = self.tree.build(X, Y)
+        parent = Decision("Root")
+        result = self.tree.build(X, Y, parent)
         self.assertItemsEqual(result, test)
 
 
@@ -118,6 +119,9 @@ class test_DecisionTree(unittest.TestCase):
 
 def suite():
     suite = unittest.TestSuite()
+    suite.addTest(test_DecisionTree("test_build"))
+    suite.addTest(test_DecisionTree("test_information_gain"))
+
     suite.addTest(test_DecisionTree("trainTest"))
     return suite
 if __name__ == '__main__':
