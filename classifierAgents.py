@@ -44,62 +44,67 @@ class Node(object):
     def __init__(self,value):
         self.value = value
 
+    def predict(self,x):
+        pass
+
 class Root(Node):
     def __init__(self,value):
         self.value = value
         self.children = []
+        self.attrIndex = None
 
+    def predict(self,x):
+        for child in self.children:
+            if x[self.attrIndex] == child.value:
+                return child.predict(x)
 
 class Decision(Root):
-    def __init__(self, value, attrIndex):
+    def __init__(self, value):
         super(Decision,self).__init__(value)
-        self.attrIndex = attrIndex
+
 
 
 class Leaf(Node):
-    def __init__(self,value,attrIndex):
-        self.attrIndex = attrIndex
+    def __init__(self,value,clss):
+        self.clss = clss
         self.value = value
 
+    def predict(self,x):
+        return self.clss
 
 
-
-
-
-
-
-class DecisionTree():  # base decision tree ( in classes )
+class DecisionTree():  
     def __init__(self,minLeafInstances = 1):
         self.nodes = []
         self.minLeafInstances = minLeafInstances #min leaf samples
         self.classes = []
 
-    def train(self,X,Y): # equivalent to fit
+        self.counter = 1
+
+    def train(self,X,Y): 
+        X = np.array(X)
+        Y = np.array(Y) 
         nSamples, self.nFeatures = X.shape
-        # Y = np.at_least1d(Y)
         if len(Y) != nSamples:
             raise ValueError("Number of labels {} does not match samples {}".format(len(Y),nSamples))
+
+        yNew = self.trainRemoveConflicts(X,Y)
         self.nodes.append(Root("Root"))
-        self.split(X, Y, self.nodes[0])
+        self.split(X, yNew, self.nodes[0])
+        # self.optimise()
     
-    def predict(self,X, node = None):
-        
-        if node == None:
-            # set node to root if unspecified
-            node = self.nodes[0]
+    def trainRemoveConflicts(self,x,y):
+        for row in x:
+            matches = np.where((x == row).all(axis=1))[0]
+            if len(matches) > 1:
+                classes, counts = np.unique(y[matches],return_counts=True)
+                # make y most common class
+                y[matches] = y[np.argmax(counts)]   
+        return y
 
-        # if node is leaf, return leaf value
-        if isinstance(node,Leaf):
-            return node.value
+    def predict(self,x):
+        return self.nodes[0].predict(x)
 
-        children = node.children
-        for child in children:
-            index = child.attrIndex
-            if str(X[index]) == str(child.value):
-                return self.predict(X,child)
-
-    def prune(self):
-        pass
 
     # instanceClasses are numbers of each class contained
     # simply works out purity of class
@@ -112,7 +117,7 @@ class DecisionTree():  # base decision tree ( in classes )
                 Bq = -(fraction*math.log(fraction,2))
             else:
                 Bq = 0
-                print("n was 0")
+                # print("n was 0")
             purity += Bq
 
         return purity
@@ -141,45 +146,57 @@ class DecisionTree():  # base decision tree ( in classes )
         return remainder    
 
 
-    def split(self,X,Y, parentNode):
+    def allSame(self,arry):
+        if len(arry)==1:
+            return True
+        else:
+            return all(np.array_equal(el,arry[0]) for el in arry)
+
+    def split(self, X, Y, parentNode):
         # X input as array of rows
 
         # make data cols
         reshapeX = np.array(X).T 
-        
+
         attrEntropies = []
-        # attr is a column
-        for attr in reshapeX: 
+        for col in reshapeX: 
             # calc entropies
-            attrEntropies.append(self.weightedEntropies(attr,Y)) 
+            attrEntropies.append(self.weightedEntropies(col,Y)) 
 
         # max information gain is min entropy
         maxIndex = np.argmin(attrEntropies)
+        parentNode.attrIndex = maxIndex
+
         # unique attributes we will split by
         newSets = np.unique(reshapeX[maxIndex]) 
 
-
-
+        entsIsSame = self.allSame(attrEntropies)
         for att in newSets:
-            # indexes where split attribute = att
+            # xNew,yNew are values with split attribute
             rows = np.where(reshapeX[maxIndex]==att) 
+            xNew = X[rows] 
             yNew = Y[rows]
 
-            if len(np.unique(yNew))==1 or all(el == attrEntropies[0] for el in attrEntropies): # if y only has one attrbute
-                # leaf node with value of label
-                leafNode = Leaf(yNew[0],maxIndex) 
+            # if all classes, features or entropies are the same
+            # make a leaf node
+            if self.allSame(yNew) or entsIsSame:
+
+                leafNode = Leaf(att,yNew[0])
                 parentNode.children.append(leafNode)
                 self.nodes.append(leafNode)
-                print()
+
+                print ("Leaf created: "+str(self.counter))
+                self.counter +=1
 
             else:
-                # xNew is all values with split attribute
-                xNew = X[rows] 
-                # decision node for attribute
-                desNode = Decision(att, maxIndex) 
-                parentNode.children.append(desNode)
-                self.nodes.append(desNode)
-                self.split(xNew,yNew,desNode)
+                # make a decision node
+
+                decNode = Decision(att) 
+                parentNode.children.append(decNode)
+                self.nodes.append(decNode)
+                print("Decision created: " + str(self.counter))
+                self.counter +=1
+                self.split(xNew,yNew,decNode)
 
 
 
@@ -257,6 +274,13 @@ class ClassifierAgent(Agent):
         #
         # *********************************************
 
+        self.model.train(self.data,self.target)
+        count = 0
+        for nd in self.model.nodes:
+            if isinstance(nd,Decision):
+                print("Decision node " + str(count) + " has " + str(len(nd.children))+" children")
+            count +=1
+
         
         
     # Tidy up when Pacman dies
@@ -298,13 +322,20 @@ class ClassifierAgent(Agent):
         # from collected 'features' vector, classify as any of 0-3.
         # this gives your move
         
+        number = self.model.predict(features)
+        print number
+        action = self.convertNumberToMove(number)
 
         # Get the actions we can try.
         legal = api.legalActions(state)
 
+        if action not in legal:
+            action = random.choice(legal)
+        
+        return api.makeMove(action,legal)
         # getAction has to return a move. Here we pass "STOP" to the
         # API to ask Pacman to stay where they are. We need to pass
         # the set of legal moves to teh API so it can do some safety
         # checking.
-        return api.makeMove(Directions.STOP, legal)
+        # return api.makeMove(Directions.STOP, legal)
 
