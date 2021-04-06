@@ -34,7 +34,7 @@ import copy
 class QLearnAgent(Agent):
 
     # Constructor, called when we start running the
-    def __init__(self, alpha=0.2, epsilon=0.1, gamma=0.8, numTraining = 1000):
+    def __init__(self, alpha=0.2, epsilon=0.8, gamma=0.8, numTraining = 2000):
         # alpha       - learning rate
         # epsilon     - exploration rate
         # gamma       - discount factor
@@ -133,10 +133,7 @@ class QLearnAgent(Agent):
         reward = newScore - self.scoreLast if self.scoreLast != None else None
         self.scoreLast = newScore
         return reward
-    # getAction
-    #
-    # The main method required by the game. Called every time that
-    # Pacman is expected to move
+
     def getAction(self, state):
         # The data we have about the state of the game
         legal = state.getLegalPacmanActions()
@@ -164,7 +161,6 @@ class QLearnAgent(Agent):
         
         if actionPrime == None:
             raise Exception("No action selected")
-        # We have to return an action
         return self.numToDir(actionPrime)
             
 
@@ -173,9 +169,8 @@ class QLearnAgent(Agent):
     # This is called by the game after a win or a loss.
     def final(self, state):
         
-        # self.setEpsilon(self.epsilon*0.995)
+        self.setEpsilon(self.epsilon*0.995)
 
-        # reward = state.getScore() - self.scoreLast
         reward = self.scores(state)
         self.updateWeights(self.S,reward) 
 
@@ -191,9 +186,6 @@ class QLearnAgent(Agent):
         # of training episodes
         self.incrementEpisodesSoFar()
         if self.getEpisodesSoFar() == self.getNumTraining():
-
-            print(self.epsilon)
-
             msg = 'Training Done (turning off epsilon and alpha)'
             print '%s\n%s' % (msg,'-' * len(msg))
             self.setAlpha(0)
