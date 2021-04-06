@@ -50,7 +50,7 @@ class QLearnAgent(Agent):
         # Count the number of games we have played
         self.episodesSoFar = 0
 
-        self.table = np.empty((0,3))
+        self.QTable = np.empty((0,3))
         self.moves = []
         self.scoreLast = None
         self.S = None
@@ -65,7 +65,6 @@ class QLearnAgent(Agent):
     def registerInitialState(self,state):
         pass
 
-    # Accessor functions for the variable episodesSoFars controlling learning
     def incrementEpisodesSoFar(self):
         self.episodesSoFar +=1
 
@@ -75,7 +74,6 @@ class QLearnAgent(Agent):
     def getNumTraining(self):
         return self.numTraining
 
-    # Accessor functions for parameters
     def setEpsilon(self, value):
         self.epsilon = value
 
@@ -83,78 +81,141 @@ class QLearnAgent(Agent):
         self.alpha = value
 
     def numToDir(self,num):
+        '''
+        Converts a number to a direction.
+
+        Args: num - a number
+        Returns: a direction, eg. Directions.SOUTH
+        '''
         return self.dirDic[num]
 
     def dirToNum(self,direction):
+        '''
+        Converts a direction to a number.
+
+        Args: direction - a direction
+        Returns: a number
+        '''
         return self.dirDic.values().index(direction)
 
     def addState(self,env):
-        numActions = 4
-        #[state,Q value, N(s,a)] randomised Q values
-        row = np.array([[env,np.zeros(numActions),np.zeros(numActions)]])
-        self.table = np.append(self.table,row, axis=0)
+        '''
+        Adds a state to global table and initialises Q values and visits to 0
+
+        Args: env - state representing food, ghost and pacman positions
+        '''
+        num = 4
+        #[(state),[Q values], [visits]]
+        row = np.array([[env,np.zeros(num),np.zeros(num)]])
+        self.QTable = np.append(self.QTable,row, axis=0)
         
     def getGreedy(self,S):
-        Qs = self.table[S][1]
-        Ns = self.table[S][2]
-        product = Qs*Ns
+        '''
+        Gets action with highest Q-value given state, weighted
+        by number of visits.
+
+        Args: S - index of state in Q-table
+        Returns: x - action number
+        '''
+        # Q's * N's
+        product = self.QTable[S][1] * self.QTable[S][2]
         sort = reversed(np.argsort(product))
         for x in sort:
             if x in self.moves: return x
         raise Exception("Chosen action not legal")
 
     def QAction(self,env):
-        # returns action to take given Qtable
-        # random action for exploration
+        ''' 
+        Checks if state has been seen before by checking Q-table, 
+        and returns actions based on Q-values if present.
+        If not present it will add the state to Q-table.
+
+        Args: env - current state
+        Returns: (random, S) - (random action, index of state)
+                                if we have seen state before and 
+                                random value is below epsilon
+                (greedy, S) - (highest Q-value action, index of state)
+                                if random value above epsilon
+                (random, index) - (random action, index of state)
+                                if unique state
+        '''
+
         random = np.random.choice(self.moves)
-        # check for state in table's Env column
-        for S,x in enumerate(self.table[:,0]):
+        for S,x in enumerate(self.QTable[:,0]):
             if x == env:
                 greedy = self.getGreedy(S)
                 return (random,S) if np.random.random() < self.epsilon else (greedy,S)
 
-        # add env to table with array of randomised weights
+        # Add env to table with array of randomised weights
         self.addState(env)
-        # since new state, return random action and last env
-        return random, self.table.shape[0]-1     
+        return random, self.QTable.shape[0]-1     
 
 
-    def updateWeights(self,SPrime, reward):
-        Q = self.table[self.S][1][self.action]
-        QPrimeMax = self.table[SPrime][1][self.moves].max()
+    def updateQValues(self,SPrime, reward):
+        '''
+        Gets Q-values for state-action pairs and updates
+        Q-table with the update equation
 
-        self.table[self.S][2][self.action] += 1
+        Args: Sprime - latest state, i.e. S'
+                reward - reward for last action
+        '''
+        # Q(s,a)
+        Q = self.QTable[self.S][1][self.action]
+        # Max Q(s',a') from legal moves
+        QPrimeMax = self.QTable[SPrime][1][self.moves].max()
 
+        # Increment N(s,a)
+        self.QTable[self.S][2][self.action] += 1
+
+        # Q learning update equation
         update = self.alpha*(reward + self.gamma*QPrimeMax - Q)
-        self.table[self.S][1][self.action] += update
+        self.QTable[self.S][1][self.action] += update
 
     def scores(self, state):
+        '''
+        Calculates reward given previous state from game score
+        Reward is None for initial state, since no previous state
+
+        Args: state - game state from Pac-Man game
+        Returns: reward - score difference from previous state to current state
+        '''
         newScore = state.getScore()
         reward = newScore - self.scoreLast if self.scoreLast != None else None
         self.scoreLast = newScore
         return reward
 
     def getAction(self, state):
-        # The data we have about the state of the game
+        '''
+        Main function to be called each time-step of the game.
+        Gets legal moves and converts to numbers
+        - Converts agent/food positions to a tuple representing the environment
+        - Gets action based on environment
+        - Updates Q-values of previous state/action pair with new reward
+        - Store action and state for next time-step
+        - Return selected action
+
+        Args: state - game state from Pac-Man game
+        Returns: actionPrime (as direction) - action number converted to Direction
+        '''
         legal = state.getLegalPacmanActions()
         if Directions.STOP in legal:
             legal.remove(Directions.STOP)
 
         self.moves = [self.dirToNum(move) for move in legal]
 
-        # get states
+        # Get states
         pacLoc = state.getPacmanPosition()
         gLoc = state.getGhostPositions()
         food = state.getFood()
         env = (pacLoc, gLoc, food)
 
-        # add state if not seen, and init N(s,a)'s to 0
-        actionPrime,SPrime = self.QAction(env) # action(a') is integer 0-3, SPrime is index of state
+        # Get action from Q-Table, add env if not seen
+        actionPrime,SPrime = self.QAction(env) 
 
         # Update real scores from actions
         reward = self.scores(state)
         if reward != None:
-            self.updateWeights(SPrime,reward)
+            self.updateQValues(SPrime,reward)
 
         self.action = actionPrime
         self.S = SPrime
@@ -164,16 +225,20 @@ class QLearnAgent(Agent):
         return self.numToDir(actionPrime)
             
 
-    # Handle the end of episodes
-    #
-    # This is called by the game after a win or a loss.
     def final(self, state):
-        
+        '''
+        Called at end of each win/loss.
+        Updates Epsilon values to change exploration with each game
+        '''
+
+        # Reduce epsilon value each game end to reduce exporation
         self.setEpsilon(self.epsilon*0.995)
 
+        # Update Q-Values from last step of game
         reward = self.scores(state)
-        self.updateWeights(self.S,reward) 
+        self.updateQValues(self.S,reward) 
 
+        # Reset these variables
         self.moves = []
         self.scoreLast = None
         self.S = None
