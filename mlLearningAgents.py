@@ -34,7 +34,7 @@ import copy
 class QLearnAgent(Agent):
 
     # Constructor, called when we start running the
-    def __init__(self, alpha=0.01, epsilon=0.05, gamma=0.8, numTraining = 1000):
+    def __init__(self, alpha=0.2, epsilon=0.1, gamma=0.8, numTraining = 1000):
         # alpha       - learning rate
         # epsilon     - exploration rate
         # gamma       - discount factor
@@ -63,10 +63,8 @@ class QLearnAgent(Agent):
         }
 
     def registerInitialState(self,state):
-        
         pass
 
-   
     # Accessor functions for the variable episodesSoFars controlling learning
     def incrementEpisodesSoFar(self):
         self.episodesSoFar +=1
@@ -75,7 +73,7 @@ class QLearnAgent(Agent):
         return self.episodesSoFar
 
     def getNumTraining(self):
-            return self.numTraining
+        return self.numTraining
 
     # Accessor functions for parameters
     def setEpsilon(self, value):
@@ -83,12 +81,16 @@ class QLearnAgent(Agent):
 
     def setAlpha(self, value):
         self.alpha = value
-        
+
+    def numToDir(self,num):
+        return self.dirDic[num]
+
+    def dirToNum(self,direction):
+        return self.dirDic.values().index(direction)
 
     def addState(self,env):
         numActions = 4
         #[state,Q value, N(s,a)] randomised Q values
-        # row = np.array([[env,np.random.rand(numActions),np.zeros(numActions)]])
         row = np.array([[env,np.zeros(numActions),np.zeros(numActions)]])
         self.table = np.append(self.table,row, axis=0)
         
@@ -106,10 +108,8 @@ class QLearnAgent(Agent):
         # random action for exploration
         random = np.random.choice(self.moves)
         # check for state in table's Env column
-        S = None
-        for index,x in enumerate(self.table[:,0]):
+        for S,x in enumerate(self.table[:,0]):
             if x == env:
-                S = index
                 greedy = self.getGreedy(S)
                 return (random,S) if np.random.random() < self.epsilon else (greedy,S)
 
@@ -119,26 +119,20 @@ class QLearnAgent(Agent):
         return random, self.table.shape[0]-1     
 
 
-    def NSA(self,action):
-        self.table[self.S][2][action] += 1 
-        return self.table[self.S][2][action]
-
     def updateWeights(self,SPrime, reward):
-        q = self.table[self.S][1][self.action]
-        qPrimeMax = self.table[SPrime][1][self.moves].max()
+        Q = self.table[self.S][1][self.action]
+        QPrimeMax = self.table[SPrime][1][self.moves].max()
 
-        #increment N(s,a)
-        Nsa = self.NSA(self.action)
+        self.table[self.S][2][self.action] += 1
 
-        update = self.alpha*Nsa*(reward + self.gamma*qPrimeMax - q)
+        update = self.alpha*(reward + self.gamma*QPrimeMax - Q)
         self.table[self.S][1][self.action] += update
 
-    def numToDirection(self,num):
-        return self.dirDic[num]
-
-    def dirToNum(self,direction):
-        return self.dirDic.values().index(direction)
-
+    def scores(self, state):
+        newScore = state.getScore()
+        reward = newScore - self.scoreLast if self.scoreLast != None else None
+        self.scoreLast = newScore
+        return reward
     # getAction
     #
     # The main method required by the game. Called every time that
@@ -157,34 +151,21 @@ class QLearnAgent(Agent):
         food = state.getFood()
         env = (pacLoc, gLoc, food)
 
-
-        # LOOKUP ACTION
         # add state if not seen, and init N(s,a)'s to 0
         actionPrime,SPrime = self.QAction(env) # action(a') is integer 0-3, SPrime is index of state
 
         # Update real scores from actions
-        newScore = state.getScore()
-        if self.scoreLast != None:
-            reward = newScore-self.scoreLast
+        reward = self.scores(state)
+        if reward != None:
             self.updateWeights(SPrime,reward)
 
-        self.scoreLast = newScore
         self.action = actionPrime
         self.S = SPrime
         
-        # print "Legal moves: ", legal
-        # print "Pacman position: ", state.getPacmanPosition()
-        # print "Ghost positions:" , state.getGhostPositions()
-        # print "Food locations: "
-        # print state.getFood()
-        # print "Score: ", state.getScore()
-            
-        # Now pick what action to take. For now a random choice among
-        # the legal moves
         if actionPrime == None:
-            actionPrime = random.choice(legal)
+            raise Exception("No action selected")
         # We have to return an action
-        return self.numToDirection(actionPrime)
+        return self.numToDir(actionPrime)
             
 
     # Handle the end of episodes
@@ -192,9 +173,10 @@ class QLearnAgent(Agent):
     # This is called by the game after a win or a loss.
     def final(self, state):
         
-        self.setEpsilon(self.epsilon*0.99)
+        # self.setEpsilon(self.epsilon*0.995)
 
-        reward = state.getScore() - self.scoreLast
+        # reward = state.getScore() - self.scoreLast
+        reward = self.scores(state)
         self.updateWeights(self.S,reward) 
 
         self.moves = []
