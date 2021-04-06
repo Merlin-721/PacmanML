@@ -63,7 +63,7 @@ class QLearnAgent(Agent):
         }
 
     def registerInitialState(self,state):
-        pass
+        self.scoreLast = state.getScore()
 
     def incrementEpisodesSoFar(self):
         self.episodesSoFar +=1
@@ -180,7 +180,7 @@ class QLearnAgent(Agent):
         Returns: reward - score difference from previous state to current state
         '''
         newScore = state.getScore()
-        reward = newScore - self.scoreLast if self.scoreLast != None else None
+        reward = newScore - self.scoreLast
         self.scoreLast = newScore
         return reward
 
@@ -203,7 +203,7 @@ class QLearnAgent(Agent):
 
         self.moves = [self.dirToNum(move) for move in legal]
 
-        # Get states
+        # Get locations and create environment
         pacLoc = state.getPacmanPosition()
         gLoc = state.getGhostPositions()
         food = state.getFood()
@@ -213,10 +213,11 @@ class QLearnAgent(Agent):
         actionPrime,SPrime = self.QAction(env) 
 
         # Update real scores from actions
-        reward = self.scores(state)
-        if reward != None:
+        if self.action != None:
+            reward = self.scores(state)
             self.updateQValues(SPrime,reward)
 
+        # Log actions for next time-step
         self.action = actionPrime
         self.S = SPrime
         
