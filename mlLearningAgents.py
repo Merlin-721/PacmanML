@@ -55,6 +55,7 @@ class QLearnAgent(Agent):
         self.scoreLast = None
         self.S = None
         self.action = None
+
         self.dirDic = {
             0:Directions.NORTH,
             1:Directions.SOUTH,
@@ -174,7 +175,6 @@ class QLearnAgent(Agent):
     def scores(self, state):
         '''
         Calculates reward given previous state from game score
-        Reward is None for initial state, since no previous state
 
         Args: state - game state from Pac-Man game
         Returns: reward - score difference from previous state to current state
