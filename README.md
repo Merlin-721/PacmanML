@@ -1,5 +1,6 @@
 # PacmanML
-This is my implementation of a Q-Learning agent, using a Q-table, in the Berkeley Pac-Man environment.
+This is my implementation of a Q-Learning agent, found in ```classifierAgents.py```, and a Decision-Tree classifier agent, found in ```mlLearningAgents.py```, in the Berkeley Pac-Man environment.
+The main branch contains the Decision-Tree classifier agent and respective unit tests, and the master branch contains the Q-Learning agent.
 ## Requirements
 
 * Python 2.7
